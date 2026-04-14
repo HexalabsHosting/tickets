@@ -4,12 +4,16 @@ namespace FyWolf\Tickets\Filament\Admin\Resources\Tickets\RelationManagers;
 
 use App\Filament\Admin\Resources\Users\Pages\EditUser;
 use App\Filament\Components\Tables\Columns\DateTimeColumn;
+use FyWolf\Tickets\Enums\TicketStatus;
+use FyWolf\Tickets\Models\CannedResponse;
 use FyWolf\Tickets\Models\Ticket;
 use FyWolf\Tickets\Models\TicketMessage;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\MarkdownEditor;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
@@ -65,12 +69,38 @@ class MessagesRelationManager extends RelationManager
                     ->hiddenLabel()
                     ->icon('tabler-plus')
                     ->schema([
+                        Select::make('canned_response_id')
+                            ->label(trans('tickets::tickets.canned_response_insert'))
+                            ->placeholder(trans('tickets::tickets.canned_response_select'))
+                            ->options(fn () => CannedResponse::orderBy('category')->orderBy('name')->get()
+                                ->groupBy('category')
+                                ->mapWithKeys(fn ($items, $category) => [
+                                    ($category ?: trans('tickets::tickets.canned_response_uncategorized')) => $items->pluck('name', 'id'),
+                                ])
+                            )
+                            ->live()
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                if ($state) {
+                                    $response = CannedResponse::find($state);
+                                    if ($response) {
+                                        $set('message', $response->content);
+                                    }
+                                }
+                            })
+                            ->dehydrated(false)
+                            ->hidden(fn () => CannedResponse::count() === 0),
                         MarkdownEditor::make('message')
                             ->label(trans_choice('tickets::tickets.message', 1))
                             ->required(),
                         Toggle::make('hidden')
                             ->label(trans('tickets::tickets.hidden') . '?'),
-                    ]),
+                    ])
+                    ->after(function () {
+                        $ticket = $this->getOwnerRecord();
+                        if ($ticket->status === TicketStatus::WaitingForCustomer || $ticket->status === TicketStatus::Open) {
+                            $ticket->update(['status' => TicketStatus::InProgress]);
+                        }
+                    }),
             ]);
     }
 }

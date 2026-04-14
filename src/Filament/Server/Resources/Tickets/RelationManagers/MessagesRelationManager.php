@@ -64,7 +64,19 @@ class MessagesRelationManager extends RelationManager
                         MarkdownEditor::make('message')
                             ->label(trans_choice('tickets::tickets.message', 1))
                             ->required(),
-                    ]),
+                    ])
+                    ->after(function () {
+                        $ticket = $this->getOwnerRecord();
+                        if ($ticket->status === TicketStatus::WaitingForCustomer) {
+                            $ticket->update(['status' => TicketStatus::InProgress]);
+                        }
+
+                        if (config('tickets.notifications.new_reply') && $ticket->assignedUser) {
+                            \Filament\Notifications\Notification::make()
+                                ->title(trans('tickets::tickets.notifications.new_reply'))
+                                ->sendToDatabase($ticket->assignedUser);
+                        }
+                    }),
             ]);
     }
 

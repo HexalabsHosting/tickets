@@ -4,7 +4,6 @@ namespace FyWolf\Tickets\Filament\Server\Resources\Tickets;
 
 use App\Filament\Admin\Resources\Users\Pages\EditUser;
 use App\Filament\Components\Tables\Columns\DateTimeColumn;
-use FyWolf\Tickets\Enums\TicketCategory;
 use FyWolf\Tickets\Enums\TicketPriority;
 use FyWolf\Tickets\Enums\TicketStatus;
 use FyWolf\Tickets\Filament\Server\Resources\Tickets\Pages\CreateTicket;
@@ -12,6 +11,7 @@ use FyWolf\Tickets\Filament\Server\Resources\Tickets\Pages\ListTickets;
 use FyWolf\Tickets\Filament\Server\Resources\Tickets\Pages\ViewTicket;
 use FyWolf\Tickets\Filament\Server\Resources\Tickets\RelationManagers\MessagesRelationManager;
 use FyWolf\Tickets\Models\Ticket;
+use FyWolf\Tickets\Models\TicketCategory;
 use Filament\Actions\CreateAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\MarkdownEditor;
@@ -72,9 +72,12 @@ class TicketResource extends Resource
                     ->sortable()
                     ->searchable()
                     ->grow(),
-                TextColumn::make('category')
+                TextColumn::make('category.name')
                     ->label(trans('tickets::tickets.category'))
                     ->badge()
+                    ->color(fn (Ticket $ticket) => $ticket->category?->color ?? 'gray')
+                    ->icon(fn (Ticket $ticket) => $ticket->category?->icon)
+                    ->placeholder('—')
                     ->toggleable(),
                 TextColumn::make('priority')
                     ->label(trans('tickets::tickets.priority'))
@@ -109,14 +112,10 @@ class TicketResource extends Resource
                 CreateAction::make(),
             ])
             ->groups([
-                Group::make('category')
-                    ->label(trans('tickets::tickets.category')),
-                Group::make('priority')
-                    ->label(trans('tickets::tickets.priority')),
-                Group::make('status')
-                    ->label(trans('tickets::tickets.status')),
-                Group::make('author.username')
-                    ->label(trans('tickets::tickets.created_by')),
+                Group::make('category.name')->label(trans('tickets::tickets.category')),
+                Group::make('priority')->label(trans('tickets::tickets.priority')),
+                Group::make('status')->label(trans('tickets::tickets.status')),
+                Group::make('author.username')->label(trans('tickets::tickets.created_by')),
             ])
             ->emptyStateIcon('tabler-ticket')
             ->emptyStateDescription('')
@@ -131,10 +130,10 @@ class TicketResource extends Resource
                     ->label(trans_choice('tickets::tickets.title', 1))
                     ->required()
                     ->columnSpanFull(),
-                Select::make('category')
+                Select::make('category_id')
                     ->label(trans('tickets::tickets.category'))
-                    ->required()
-                    ->options(TicketCategory::class),
+                    ->options(fn () => TicketCategory::groupedOptions())
+                    ->searchable(),
                 Select::make('priority')
                     ->label(trans('tickets::tickets.priority'))
                     ->required()
@@ -157,9 +156,12 @@ class TicketResource extends Resource
                         TextEntry::make('title')
                             ->label(trans_choice('tickets::tickets.title', 1))
                             ->columnSpanFull(),
-                        TextEntry::make('category')
+                        TextEntry::make('category.name')
                             ->label(trans('tickets::tickets.category'))
-                            ->badge(),
+                            ->badge()
+                            ->color(fn (Ticket $ticket) => $ticket->category?->color ?? 'gray')
+                            ->icon(fn (Ticket $ticket) => $ticket->category?->icon)
+                            ->placeholder('—'),
                         TextEntry::make('priority')
                             ->label(trans('tickets::tickets.priority'))
                             ->badge(),
@@ -195,9 +197,9 @@ class TicketResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListTickets::route('/'),
+            'index'  => ListTickets::route('/'),
             'create' => CreateTicket::route('/create'),
-            'view' => ViewTicket::route('/{record}'),
+            'view'   => ViewTicket::route('/{record}'),
         ];
     }
 

@@ -10,6 +10,7 @@ enum TicketStatus: string implements HasColor, HasIcon, HasLabel
 {
     case Open = 'open';
     case InProgress = 'in_progress';
+    case WaitingForCustomer = 'waiting_for_customer';
     case Closed = 'closed';
 
     public function getIcon(): string
@@ -17,6 +18,7 @@ enum TicketStatus: string implements HasColor, HasIcon, HasLabel
         return match ($this) {
             self::Open => 'tabler-circle-dashed',
             self::InProgress => 'tabler-progress',
+            self::WaitingForCustomer => 'tabler-clock-pause',
             self::Closed => 'tabler-circle-check',
         };
     }
@@ -26,12 +28,21 @@ enum TicketStatus: string implements HasColor, HasIcon, HasLabel
         return match ($this) {
             self::Open => 'primary',
             self::InProgress => 'success',
+            self::WaitingForCustomer => 'warning',
             self::Closed => 'danger',
         };
     }
 
     public function getLabel(): string
     {
-        return str($this->value)->headline();
+        return match ($this) {
+            self::WaitingForCustomer => trans('tickets::tickets.waiting_for_customer'),
+            default => str($this->value)->headline(),
+        };
+    }
+
+    public function isOpen(): bool
+    {
+        return $this !== self::Closed;
     }
 }
