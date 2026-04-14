@@ -40,7 +40,7 @@ class TicketResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'tabler-ticket';
 
-    protected static ?string $navigationGroup = 'Tickets';
+    protected static string|\UnitEnum|null $navigationGroup = 'Tickets';
 
     protected static ?int $navigationSort = 1;
 

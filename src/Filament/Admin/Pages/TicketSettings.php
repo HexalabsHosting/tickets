@@ -26,7 +26,7 @@ class TicketSettings extends Page implements HasSchemas
 
     protected static string|\BackedEnum|null $navigationIcon = 'tabler-settings';
 
-    protected static ?string $navigationGroup = 'Tickets';
+    protected static string|\UnitEnum|null $navigationGroup = 'Tickets';
 
     protected static ?int $navigationSort = 99;
 

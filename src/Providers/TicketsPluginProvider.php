@@ -17,8 +17,6 @@ class TicketsPluginProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(plugin_path('tickets', 'config/tickets.php'), 'tickets');
-
         Role::registerCustomDefaultPermissions('ticket');
         Role::registerCustomDefaultPermissions('canned_response');
         Role::registerCustomDefaultPermissions('ticket_category');

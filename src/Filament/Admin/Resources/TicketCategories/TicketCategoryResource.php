@@ -23,7 +23,7 @@ class TicketCategoryResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'tabler-category';
 
-    protected static ?string $navigationGroup = 'Tickets';
+    protected static string|\UnitEnum|null $navigationGroup = 'Tickets';
 
     protected static ?int $navigationSort = 97;
 
