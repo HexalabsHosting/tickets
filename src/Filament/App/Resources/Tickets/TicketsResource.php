@@ -11,6 +11,7 @@ use FyWolf\Tickets\Enums\TicketStatus;
 use FyWolf\Tickets\Filament\App\Resources\Tickets\Pages\ListTickets;
 use FyWolf\Tickets\Filament\Server\Resources\Tickets\Pages\ViewTicket;
 use FyWolf\Tickets\Models\Ticket;
+use FyWolf\Tickets\Models\TicketCategory;
 use Illuminate\Database\Eloquent\Builder;
 
 class TicketsResource extends Resource
@@ -58,9 +59,12 @@ class TicketsResource extends Resource
                     ->sortable()
                     ->searchable()
                     ->grow(),
-                TextColumn::make('category')
+                TextColumn::make('category.name')
                     ->label('Category')
                     ->badge()
+                    ->color(fn (Ticket $ticket) => $ticket->category?->color ?? 'gray')
+                    ->icon(fn (Ticket $ticket) => $ticket->category?->icon)
+                    ->placeholder('—')
                     ->toggleable(),
                 TextColumn::make('priority')
                     ->label('Priority')
