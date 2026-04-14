@@ -1,0 +1,19 @@
+{
+    "id": "tickets",
+    "name": "Tickets",
+    "author": "FyWolf",
+    "version": "1.0.0",
+    "description": "Simple ticket system",
+    "category": "plugin",
+    "url": "https://github.com/FyWolf/tickets",
+    "update_url": null,
+    "namespace": "FyWolf\\Tickets",
+    "class": "TicketsPlugin",
+    "panels": [
+        "admin",
+        "app",
+        "server"
+    ],
+    "panel_version": null,
+    "composer_packages": null
+}
