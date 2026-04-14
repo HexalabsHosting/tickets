@@ -5,6 +5,7 @@ namespace FyWolf\Tickets;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 use FyWolf\Tickets\Filament\Admin\Pages\TicketSettings;
+use FyWolf\Tickets\Filament\Admin\Widgets\TicketsOverviewWidget;
 
 class TicketsPlugin implements Plugin
 {
@@ -21,6 +22,7 @@ class TicketsPlugin implements Plugin
 
         if ($panel->getId() === 'admin') {
             $panel->pages([TicketSettings::class]);
+            $panel->widgets([TicketsOverviewWidget::class]);
         }
     }
 

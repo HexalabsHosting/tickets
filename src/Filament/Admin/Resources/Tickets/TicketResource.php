@@ -12,6 +12,7 @@ use FyWolf\Tickets\Filament\Admin\Resources\Tickets\Pages\EditTicket;
 use FyWolf\Tickets\Filament\Admin\Resources\Tickets\Pages\ListTickets;
 use FyWolf\Tickets\Filament\Admin\Resources\Tickets\Pages\ViewTicket;
 use FyWolf\Tickets\Filament\Admin\Resources\Tickets\RelationManagers\MessagesRelationManager;
+use FyWolf\Tickets\Filament\Admin\Widgets\TicketsOverviewWidget;
 use FyWolf\Tickets\Filament\Components\Actions\AnswerAction;
 use FyWolf\Tickets\Filament\Components\Actions\AssignToMeAction;
 use FyWolf\Tickets\Filament\Components\Actions\CloseAction;
@@ -322,6 +323,13 @@ class TicketResource extends Resource
             'create' => CreateTicket::route('/create'),
             'view'   => ViewTicket::route('/{record}'),
             'edit'   => EditTicket::route('/{record}/edit'),
+        ];
+    }
+
+    public static function getWidgets(): array
+    {
+        return [
+            TicketsOverviewWidget::class,
         ];
     }
 
