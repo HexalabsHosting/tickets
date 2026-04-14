@@ -6,7 +6,7 @@
   "description": "Professional ticketing suite with SLA, canned responses, and configurable settings",
   "category": "plugin",
   "url": "https://github.com/HexalabsHosting/tickets",
-  "update_url": "https://github.com/HexalabsHosting/tickets/refs/heads/main/updater.json",
+  "update_url": "https://raw.githubusercontent.com/HexalabsHosting/tickets/refs/heads/main/updater.json",
   "namespace": "FyWolf\\Tickets",
   "class": "TicketsPlugin",
   "panels": [
