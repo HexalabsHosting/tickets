@@ -7,11 +7,11 @@ use FyWolf\Tickets\Models\Ticket;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 
-class AssignToMeAction extends Action
+class WaitingAction extends Action
 {
     public static function getDefaultName(): ?string
     {
-        return 'assign_to_me';
+        return 'set_waiting';
     }
 
     protected function setUp(): void
@@ -20,19 +20,21 @@ class AssignToMeAction extends Action
 
         $this->authorize(fn (Ticket $ticket) => auth()->user()->can('update ticket', $ticket));
 
-        $this->hidden(fn (Ticket $ticket) => $ticket->assigned_user_id === auth()->user()->id || $ticket->status === TicketStatus::Closed);
+        $this->hidden(fn (Ticket $ticket) => $ticket->status === TicketStatus::Closed || $ticket->status === TicketStatus::WaitingForCustomer);
 
-        $this->tooltip(trans('tickets::tickets.assign_to_me'));
+        $this->tooltip(trans('tickets::tickets.waiting_for_customer'));
 
-        $this->icon('tabler-user-share');
+        $this->icon('tabler-clock-pause');
 
-        $this->color('primary');
+        $this->color('warning');
+
+        $this->requiresConfirmation();
 
         $this->action(function (Ticket $ticket) {
-            $ticket->assignTo(auth()->user());
+            $ticket->update(['status' => TicketStatus::WaitingForCustomer]);
 
             Notification::make()
-                ->title(trans('tickets::tickets.notifications.assigned_to_you'))
+                ->title(trans('tickets::tickets.notifications.set_waiting'))
                 ->success()
                 ->send();
         });

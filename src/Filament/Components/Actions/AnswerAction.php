@@ -21,9 +21,11 @@ class AnswerAction extends Action
 
         $this->authorize(fn (Ticket $ticket) => auth()->user()->can('update ticket', $ticket));
 
-        $this->hidden(fn (Ticket $ticket) => $ticket->status === TicketStatus::Closed || $ticket->assigned_user_id !== auth()->user()->id);
+        $this->hidden(fn (Ticket $ticket) => $ticket->status === TicketStatus::Closed);
 
         $this->tooltip(trans('tickets::tickets.answer_verb'));
+
+        $this->modalHeading(trans('tickets::tickets.close_with_reply'));
 
         $this->icon('tabler-edit');
 

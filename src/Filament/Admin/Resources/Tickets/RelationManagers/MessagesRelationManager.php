@@ -8,7 +8,9 @@ use FyWolf\Tickets\Enums\TicketStatus;
 use FyWolf\Tickets\Models\CannedResponse;
 use FyWolf\Tickets\Models\Ticket;
 use FyWolf\Tickets\Models\TicketMessage;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
@@ -32,7 +34,7 @@ class MessagesRelationManager extends RelationManager
             ->modelLabel(trans_choice('tickets::tickets.message', 1))
             ->pluralModelLabel(trans_choice('tickets::tickets.message', 2))
             ->paginated(false)
-            ->defaultSort('created_at', 'desc')
+            ->defaultSort('created_at', 'asc')
             ->columns([
                 Stack::make([
                     TextColumn::make('message')
@@ -62,6 +64,16 @@ class MessagesRelationManager extends RelationManager
                             ->state(fn (TicketMessage $ticketMessage) => $ticketMessage->author_id === $this->getOwnerRecord()->assigned_user_id ? trans('tickets::tickets.admin') : null),
                     ]),
                 ])->space(3),
+            ])
+            ->recordActions([
+                Action::make('toggle_hidden')
+                    ->tooltip(fn (TicketMessage $message) => $message->hidden ? trans('tickets::tickets.unhide_message') : trans('tickets::tickets.hide_message'))
+                    ->icon(fn (TicketMessage $message) => $message->hidden ? 'tabler-eye' : 'tabler-eye-off')
+                    ->color('warning')
+                    ->action(fn (TicketMessage $message) => $message->update(['hidden' => !$message->hidden])),
+                DeleteAction::make()
+                    ->tooltip(fn (\Filament\Actions\DeleteAction $action) => $action->getLabel())
+                    ->hiddenLabel(),
             ])
             ->headerActions([
                 CreateAction::make()

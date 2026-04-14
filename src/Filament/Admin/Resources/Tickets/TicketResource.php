@@ -14,7 +14,9 @@ use FyWolf\Tickets\Filament\Admin\Resources\Tickets\Pages\ViewTicket;
 use FyWolf\Tickets\Filament\Admin\Resources\Tickets\RelationManagers\MessagesRelationManager;
 use FyWolf\Tickets\Filament\Components\Actions\AnswerAction;
 use FyWolf\Tickets\Filament\Components\Actions\AssignToMeAction;
+use FyWolf\Tickets\Filament\Components\Actions\CloseAction;
 use FyWolf\Tickets\Filament\Components\Actions\ReopenAction;
+use FyWolf\Tickets\Filament\Components\Actions\WaitingAction;
 use FyWolf\Tickets\Models\Ticket;
 use FyWolf\Tickets\Models\TicketCategory;
 use Filament\Actions\CreateAction;
@@ -188,7 +190,9 @@ class TicketResource extends Resource
                 EditAction::make(),
                 AnswerAction::make(),
                 AssignToMeAction::make(),
+                WaitingAction::make(),
                 ReopenAction::make(),
+                CloseAction::make(),
                 DeleteAction::make(),
             ])
             ->toolbarActions([

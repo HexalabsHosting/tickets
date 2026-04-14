@@ -16,6 +16,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 class TicketCategoryResource extends Resource
 {
@@ -73,11 +74,24 @@ class TicketCategoryResource extends Resource
                     ])
                     ->selectablePlaceholder(false)
                     ->default('primary'),
-                TextInput::make('icon')
+                Select::make('icon')
                     ->label(trans('tickets::tickets.category_field_icon'))
                     ->placeholder('tabler-help-circle')
                     ->helperText(trans('tickets::tickets.category_field_icon_help'))
-                    ->maxLength(100),
+                    ->searchable()
+                    ->prefixIcon(fn ($state): ?string => filled($state) ? $state : null)
+                    ->getSearchResultsUsing(function (string $search): array {
+                        $svgPath = base_path('vendor/secondnetwork/blade-tabler-icons/resources/svg');
+                        $term    = strtolower(Str::remove('tabler-', trim($search)));
+
+                        return collect(glob("$svgPath/*.svg"))
+                            ->map(fn (string $file): string => 'tabler-' . basename($file, '.svg'))
+                            ->when(filled($term), fn ($c) => $c->filter(fn (string $icon) => str_contains($icon, $term)))
+                            ->take(50)
+                            ->mapWithKeys(fn (string $icon): array => [$icon => $icon])
+                            ->toArray();
+                    })
+                    ->getOptionLabelUsing(fn ($value): string => (string) $value),
                 TextInput::make('sort_order')
                     ->label(trans('tickets::tickets.category_field_sort'))
                     ->numeric()

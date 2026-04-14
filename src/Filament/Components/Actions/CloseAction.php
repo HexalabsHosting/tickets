@@ -18,6 +18,8 @@ class CloseAction extends Action
     {
         parent::setUp();
 
+        $this->authorize(fn (Ticket $ticket) => auth()->user()->can('update ticket', $ticket));
+
         $this->hidden(fn (Ticket $ticket) => $ticket->status === TicketStatus::Closed);
 
         $this->tooltip(trans('tickets::tickets.close'));
