@@ -6,7 +6,7 @@
     "description": "Simple ticket system",
     "category": "plugin",
     "url": "https://github.com/HexalabsHosting/tickets",
-    "update_url": null,
+    "update_url": "https://github.com/HexalabsHosting/tickets/refs/heads/main/updater.json",
     "namespace": "FyWolf\\Tickets",
     "class": "TicketsPlugin",
     "panels": [
