@@ -8,6 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::dropIfExists('ticket_category_fields');
+
         Schema::create('ticket_category_fields', function (Blueprint $table) {
             $table->increments('id');
             $table->unsignedInteger('category_id');
