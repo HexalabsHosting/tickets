@@ -9,5 +9,5 @@ class CreateAutomationRule extends CreateRecord
 {
     protected static string $resource = AutomationRuleResource::class;
 
-    protected bool $canCreateAnother = false;
+    protected static bool $canCreateAnother = false;
 }
