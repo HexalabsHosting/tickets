@@ -46,6 +46,8 @@ class TicketCategoryResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
+        $svgPath = base_path('vendor/secondnetwork/blade-tabler-icons/resources/svg');
+
         return $schema
             ->columns(2)
             ->schema([
@@ -80,19 +82,31 @@ class TicketCategoryResource extends Resource
                     ->placeholder('tabler-help-circle')
                     ->helperText(trans('tickets::tickets.category_field_icon_help'))
                     ->searchable()
-                    ->prefixIcon(fn ($state): ?string => filled($state) ? $state : null)
-                    ->getSearchResultsUsing(function (string $search): array {
-                        $svgPath = base_path('vendor/secondnetwork/blade-tabler-icons/resources/svg');
-                        $term    = strtolower(Str::remove('tabler-', trim($search)));
+                    ->allowHtml()
+                    ->getSearchResultsUsing(function (string $search) use ($svgPath): array {
+                        $term = strtolower(Str::remove('tabler-', trim($search)));
 
                         return collect(glob("$svgPath/*.svg"))
                             ->map(fn (string $file): string => 'tabler-' . basename($file, '.svg'))
                             ->when(filled($term), fn ($c) => $c->filter(fn (string $icon) => str_contains($icon, $term)))
                             ->take(50)
-                            ->mapWithKeys(fn (string $icon): array => [$icon => $icon])
+                            ->mapWithKeys(function (string $icon) use ($svgPath): array {
+                                $svg = @file_get_contents($svgPath . '/' . Str::remove('tabler-', $icon) . '.svg') ?: '';
+                                $svg = str_replace('<svg ', '<svg style="width:1.2em;height:1.2em;display:inline-block;vertical-align:middle;margin-right:.4em;flex-shrink:0;" ', $svg);
+
+                                return [$icon => '<div style="display:flex;align-items:center;gap:.25em;">' . $svg . '<span>' . $icon . '</span></div>'];
+                            })
                             ->toArray();
                     })
-                    ->getOptionLabelUsing(fn ($value): string => (string) $value),
+                    ->getOptionLabelUsing(function ($value) use ($svgPath): string {
+                        if (!filled($value)) {
+                            return (string) $value;
+                        }
+                        $svg = @file_get_contents($svgPath . '/' . Str::remove('tabler-', $value) . '.svg') ?: '';
+                        $svg = str_replace('<svg ', '<svg style="width:1.2em;height:1.2em;display:inline-block;vertical-align:middle;margin-right:.4em;flex-shrink:0;" ', $svg);
+
+                        return '<div style="display:flex;align-items:center;gap:.25em;">' . $svg . '<span>' . $value . '</span></div>';
+                    }),
                 TextInput::make('sort_order')
                     ->label(trans('tickets::tickets.category_field_sort'))
                     ->numeric()
