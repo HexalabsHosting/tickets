@@ -31,6 +31,8 @@ class TicketsPluginProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'tickets');
+
         Gate::policy(Ticket::class, TicketPolicy::class);
         Gate::policy(CannedResponse::class, CannedResponsePolicy::class);
         Gate::policy(TicketCategory::class, TicketCategoryPolicy::class);

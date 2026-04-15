@@ -8,7 +8,7 @@ use Filament\Pages\Page;
 
 class TicketsReportPage extends Page
 {
-    protected string $view = 'filament.pages.settings';
+    protected string $view = 'tickets::pages.reports';
 
     protected static string|\BackedEnum|null $navigationIcon = 'tabler-chart-bar';
 
