@@ -2,7 +2,7 @@
   "id": "tickets",
   "name": "Tickets",
   "author": "FyWolf",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "description": "Professional ticketing suite with SLA, canned responses, and configurable settings",
   "category": "plugin",
   "url": "https://github.com/HexalabsHosting/tickets",
