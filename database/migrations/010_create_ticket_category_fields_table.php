@@ -9,8 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ticket_category_fields', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('category_id')->constrained('ticket_categories')->cascadeOnDelete();
+            $table->increments('id');
+            $table->unsignedInteger('category_id');
+            $table->foreign('category_id')->references('id')->on('ticket_categories')->cascadeOnDelete();
             $table->string('label');
             $table->string('key');
             $table->string('type')->default('text'); // text, number, textarea, select, toggle
