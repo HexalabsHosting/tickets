@@ -28,8 +28,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property ?string $description
  * @property ?Carbon $closed_at
  * @property ?Carbon $first_replied_at
- * @property int $server_id
- * @property Server $server
+ * @property ?int $server_id
+ * @property ?Server $server
  * @property ?int $author_id
  * @property ?User $author
  * @property ?int $assigned_user_id
@@ -123,6 +123,7 @@ class Ticket extends Model
         if (
             config('tickets.notifications.ticket_closed', true) &&
             $this->author &&
+            $this->server &&
             collect($this->author->directAccessibleServers()->pluck('id')->all())->contains($this->server->id)
         ) {
             Notification::make()

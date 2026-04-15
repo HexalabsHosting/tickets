@@ -33,6 +33,7 @@ return [
     'unknown'               => 'Unknown',
     'assigned_to'           => 'Assigned to',
     'noone'                 => 'No one',
+    'no_server'             => 'No server',
     'assign'                => 'Assign',
     'assign_to_me'          => 'Assign to me',
     'assigned_to_me'        => 'Assigned to me',

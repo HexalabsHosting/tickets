@@ -33,6 +33,7 @@ return [
     'unknown'               => 'Unbekannt',
     'assigned_to'           => 'Zugewiesen an',
     'noone'                 => 'Niemand',
+    'no_server'             => 'Kein Server',
     'assign'                => 'Zuweisen',
     'assign_to_me'          => 'Mir zuweisen',
     'assigned_to_me'        => 'Mir zugewiesene',

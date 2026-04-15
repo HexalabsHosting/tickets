@@ -144,7 +144,8 @@ class TicketResource extends Resource
                 TextColumn::make('server.name')
                     ->label(trans('tickets::tickets.server'))
                     ->icon('tabler-brand-docker')
-                    ->url(fn (Ticket $ticket) => auth()->user()->can('update server', $ticket->server) ? EditServer::getUrl(['record' => $ticket->server]) : null)
+                    ->placeholder('—')
+                    ->url(fn (Ticket $ticket) => $ticket->server && auth()->user()->can('update server', $ticket->server) ? EditServer::getUrl(['record' => $ticket->server]) : null)
                     ->toggleable(),
                 TextColumn::make('author.username')
                     ->label(trans('tickets::tickets.created_by'))
@@ -303,18 +304,16 @@ class TicketResource extends Resource
                     ->default(TicketStatus::Open),
                 Select::make('server_id')
                     ->label(trans('tickets::tickets.server'))
-                    ->required()
-                    ->selectablePlaceholder(false)
-                    ->relationship('server', 'name'),
+                    ->placeholder(trans('tickets::tickets.no_server'))
+                    ->relationship('server', 'name')
+                    ->searchable()
+                    ->preload(),
                 Select::make('assigned_user_id')
                     ->label(trans('tickets::tickets.assigned_to'))
                     ->relationship('assignedUser', 'username')
                     ->searchable()
                     ->preload()
                     ->placeholder(trans('tickets::tickets.noone')),
-                MarkdownEditor::make('description')
-                    ->label(trans('tickets::tickets.description'))
-                    ->columnSpanFull(),
                 \Filament\Schemas\Components\Section::make(trans('tickets::tickets.custom_fields'))
                     ->columnSpanFull()
                     ->columns(2)
@@ -327,6 +326,9 @@ class TicketResource extends Resource
                     ->hidden(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => !$get('category_id') ||
                         TicketCategoryField::where('category_id', $get('category_id'))->doesntExist()
                     ),
+                MarkdownEditor::make('description')
+                    ->label(trans('tickets::tickets.description'))
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -361,11 +363,14 @@ class TicketResource extends Resource
                         TextEntry::make('server.name')
                             ->label(trans('tickets::tickets.server'))
                             ->icon('tabler-brand-docker')
-                            ->url(fn (Ticket $ticket) => auth()->user()->can('update server', $ticket->server) ? EditServer::getUrl(['record' => $ticket->server]) : null),
+                            ->placeholder('—')
+                            ->url(fn (Ticket $ticket) => $ticket->server && auth()->user()->can('update server', $ticket->server) ? EditServer::getUrl(['record' => $ticket->server]) : null),
                         TextEntry::make('server.user.username')
                             ->label(trans('tickets::tickets.owner'))
                             ->icon('tabler-user')
-                            ->url(fn (Ticket $ticket) => auth()->user()->can('update user', $ticket->server->user) ? EditUser::getUrl(['record' => $ticket->server->user]) : null),
+                            ->placeholder('—')
+                            ->visible(fn (Ticket $ticket) => $ticket->server !== null)
+                            ->url(fn (Ticket $ticket) => $ticket->server?->user && auth()->user()->can('update user', $ticket->server->user) ? EditUser::getUrl(['record' => $ticket->server->user]) : null),
                         TextEntry::make('author.username')
                             ->label(trans('tickets::tickets.created_by'))
                             ->icon('tabler-user')

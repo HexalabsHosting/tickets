@@ -12,6 +12,9 @@ use FyWolf\Tickets\Filament\Server\Resources\Tickets\Pages\ViewTicket;
 use FyWolf\Tickets\Filament\Server\Resources\Tickets\RelationManagers\MessagesRelationManager;
 use FyWolf\Tickets\Models\Ticket;
 use FyWolf\Tickets\Models\TicketCategory;
+use FyWolf\Tickets\Models\TicketCategoryField;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\CreateAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\MarkdownEditor;
@@ -133,12 +136,26 @@ class TicketResource extends Resource
                 Select::make('category_id')
                     ->label(trans('tickets::tickets.category'))
                     ->options(fn () => TicketCategory::groupedOptions())
-                    ->searchable(),
+                    ->searchable()
+                    ->live()
+                    ->afterStateUpdated(fn (Set $set) => $set('custom_field_values', [])),
                 Select::make('priority')
                     ->label(trans('tickets::tickets.priority'))
                     ->required()
                     ->options(TicketPriority::class)
                     ->default(TicketPriority::Normal),
+                Section::make(trans('tickets::tickets.custom_fields'))
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->schema(fn (Get $get): array => TicketCategoryField::where('category_id', $get('category_id'))
+                        ->orderBy('sort_order')
+                        ->get()
+                        ->map(fn (TicketCategoryField $field) => $field->toFormComponent())
+                        ->toArray()
+                    )
+                    ->hidden(fn (Get $get): bool => !$get('category_id') ||
+                        TicketCategoryField::where('category_id', $get('category_id'))->doesntExist()
+                    ),
                 MarkdownEditor::make('description')
                     ->label(trans('tickets::tickets.description'))
                     ->columnSpanFull(),
@@ -183,6 +200,27 @@ class TicketResource extends Resource
                             ->since(timezone: auth()->user()->timezone ?? config('app.timezone', 'UTC'))
                             ->dateTimeTooltip(timezone: auth()->user()->timezone ?? config('app.timezone', 'UTC')),
                     ]),
+                Section::make(trans('tickets::tickets.custom_fields'))
+                    ->columnSpanFull()
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 3])
+                    ->schema(function (Ticket $ticket): array {
+                        if (!$ticket->category_id) {
+                            return [];
+                        }
+
+                        return TicketCategoryField::where('category_id', $ticket->category_id)
+                            ->orderBy('sort_order')
+                            ->get()
+                            ->map(fn (TicketCategoryField $field) => TextEntry::make("custom_field_values.{$field->key}")
+                                ->label($field->label)
+                                ->placeholder('—')
+                                ->formatStateUsing(fn ($state) => is_bool($state) ? ($state ? '✓' : '✗') : (string) ($state ?? ''))
+                            )
+                            ->toArray();
+                    })
+                    ->visible(fn (Ticket $ticket): bool => $ticket->category_id !== null &&
+                        TicketCategoryField::where('category_id', $ticket->category_id)->exists()
+                    ),
                 Section::make(trans('tickets::tickets.description'))
                     ->columnSpanFull()
                     ->schema([

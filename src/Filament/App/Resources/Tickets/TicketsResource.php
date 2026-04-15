@@ -76,6 +76,7 @@ class TicketsResource extends Resource
                 TextColumn::make('server.name')
                     ->label('Server')
                     ->icon('tabler-brand-docker')
+                    ->placeholder('—')
                     ->toggleable(),
                 DateTimeColumn::make('created_at')
                     ->label('Opened')
@@ -88,11 +89,11 @@ class TicketsResource extends Resource
                     ->label('View')
                     ->icon('tabler-eye')
                     ->color('gray')
-                    ->url(fn (Ticket $ticket) => ViewTicket::getUrl(
-                        ['record' => $ticket->id],
-                        panel: 'server',
-                        tenant: $ticket->server,
-                    )),
+                    ->url(fn (Ticket $ticket) => $ticket->server
+                        ? ViewTicket::getUrl(['record' => $ticket->id], panel: 'server', tenant: $ticket->server)
+                        : null
+                    )
+                    ->hidden(fn (Ticket $ticket) => $ticket->server === null),
             ])
             ->emptyStateHeading('No Tickets')
             ->emptyStateDescription('')
