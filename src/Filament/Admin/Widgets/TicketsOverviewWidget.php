@@ -50,6 +50,22 @@ class TicketsOverviewWidget extends BaseWidget
                 ->color($overdue > 0 ? 'danger' : 'success');
         }
 
+        $avgMinutes = Ticket::whereNotNull('first_replied_at')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->get()
+            ->avg(fn (Ticket $t) => $t->created_at->diffInMinutes($t->first_replied_at));
+
+        $avgLabel = $avgMinutes === null
+            ? '—'
+            : ($avgMinutes < 60
+                ? round($avgMinutes) . ' min'
+                : round($avgMinutes / 60, 1) . ' h');
+
+        $stats[] = Stat::make(trans('tickets::tickets.stats.avg_first_reply'), $avgLabel)
+            ->icon('tabler-clock-bolt')
+            ->color('info')
+            ->description(trans('tickets::tickets.stats.avg_first_reply_period'));
+
         return $stats;
     }
 }

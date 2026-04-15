@@ -47,6 +47,11 @@ class TicketCategory extends Model
         return $this->hasMany(Ticket::class, 'category_id');
     }
 
+    public function fields(): HasMany
+    {
+        return $this->hasMany(TicketCategoryField::class, 'category_id')->orderBy('sort_order')->orderBy('label');
+    }
+
     public function getFullNameAttribute(): string
     {
         return $this->parent ? $this->parent->name . ' › ' . $this->name : $this->name;

@@ -5,6 +5,7 @@ namespace FyWolf\Tickets\Filament\Admin\Resources\Tickets;
 use App\Filament\Admin\Resources\Servers\Pages\EditServer;
 use App\Filament\Admin\Resources\Users\Pages\EditUser;
 use App\Filament\Components\Tables\Columns\DateTimeColumn;
+use App\Models\User;
 use FyWolf\Tickets\Enums\TicketPriority;
 use FyWolf\Tickets\Enums\TicketStatus;
 use FyWolf\Tickets\Filament\Admin\Resources\Tickets\Pages\CreateTicket;
@@ -20,10 +21,14 @@ use FyWolf\Tickets\Filament\Components\Actions\ReopenAction;
 use FyWolf\Tickets\Filament\Components\Actions\WaitingAction;
 use FyWolf\Tickets\Models\Ticket;
 use FyWolf\Tickets\Models\TicketCategory;
+use FyWolf\Tickets\Models\TicketCategoryField;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Illuminate\Database\Eloquent\Collection;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -198,6 +203,63 @@ class TicketResource extends Resource
             ])
             ->toolbarActions([
                 CreateAction::make(),
+                BulkActionGroup::make([
+                    BulkAction::make('bulk_close')
+                        ->label(trans('tickets::tickets.bulk_close'))
+                        ->icon('tabler-circle-x')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $records->each(function (Ticket $ticket) {
+                                if ($ticket->status !== TicketStatus::Closed) {
+                                    $ticket->close();
+                                }
+                            });
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    BulkAction::make('bulk_assign')
+                        ->label(trans('tickets::tickets.bulk_assign'))
+                        ->icon('tabler-user-check')
+                        ->color('primary')
+                        ->schema([
+                            \Filament\Forms\Components\Select::make('user_id')
+                                ->label(trans('tickets::tickets.assigned_to'))
+                                ->searchable()
+                                ->getSearchResultsUsing(fn (string $search): array => User::where('username', 'like', "%{$search}%")
+                                    ->orderBy('username')
+                                    ->limit(50)
+                                    ->pluck('username', 'id')
+                                    ->toArray()
+                                )
+                                ->getOptionLabelUsing(fn ($value): string => User::find($value)?->username ?? (string) $value)
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $user = User::find($data['user_id']);
+                            if ($user) {
+                                $records->each(function (Ticket $ticket) use ($user) {
+                                    if ($ticket->status !== TicketStatus::Closed) {
+                                        $ticket->assignTo($user);
+                                    }
+                                });
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    BulkAction::make('bulk_priority')
+                        ->label(trans('tickets::tickets.bulk_priority'))
+                        ->icon('tabler-adjustments')
+                        ->color('warning')
+                        ->schema([
+                            \Filament\Forms\Components\Select::make('priority')
+                                ->label(trans('tickets::tickets.priority'))
+                                ->options(TicketPriority::class)
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $records->each(fn (Ticket $ticket) => $ticket->update(['priority' => $data['priority']]));
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                ]),
             ])
             ->groups([
                 Group::make('category.name')->label(trans('tickets::tickets.category')),
@@ -207,6 +269,7 @@ class TicketResource extends Resource
                 Group::make('author.username')->label(trans('tickets::tickets.created_by')),
                 Group::make('assignedUser.username')->label(trans('tickets::tickets.assigned_to')),
             ])
+            ->persistFiltersInSession()
             ->emptyStateIcon('tabler-ticket')
             ->emptyStateDescription('')
             ->emptyStateHeading(trans('tickets::tickets.no_tickets'));
@@ -223,7 +286,9 @@ class TicketResource extends Resource
                 Select::make('category_id')
                     ->label(trans('tickets::tickets.category'))
                     ->options(fn () => TicketCategory::groupedOptions())
-                    ->searchable(),
+                    ->searchable()
+                    ->live()
+                    ->afterStateUpdated(fn (\Filament\Schemas\Components\Utilities\Set $set) => $set('custom_field_values', [])),
                 Select::make('priority')
                     ->label(trans('tickets::tickets.priority'))
                     ->required()
@@ -250,6 +315,18 @@ class TicketResource extends Resource
                 MarkdownEditor::make('description')
                     ->label(trans('tickets::tickets.description'))
                     ->columnSpanFull(),
+                \Filament\Schemas\Components\Section::make(trans('tickets::tickets.custom_fields'))
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->schema(fn (\Filament\Schemas\Components\Utilities\Get $get): array => TicketCategoryField::where('category_id', $get('category_id'))
+                        ->orderBy('sort_order')
+                        ->get()
+                        ->map(fn (TicketCategoryField $field) => $field->toFormComponent())
+                        ->toArray()
+                    )
+                    ->hidden(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => !$get('category_id') ||
+                        TicketCategoryField::where('category_id', $get('category_id'))->doesntExist()
+                    ),
             ]);
     }
 
@@ -304,6 +381,12 @@ class TicketResource extends Resource
                             ->dateTimeTooltip(timezone: auth()->user()->timezone ?? config('app.timezone', 'UTC'))
                             ->placeholder('—')
                             ->visible(fn (Ticket $ticket) => $ticket->closed_at !== null),
+                        TextEntry::make('first_replied_at')
+                            ->label(trans('tickets::tickets.first_replied_at'))
+                            ->since(timezone: auth()->user()->timezone ?? config('app.timezone', 'UTC'))
+                            ->dateTimeTooltip(timezone: auth()->user()->timezone ?? config('app.timezone', 'UTC'))
+                            ->placeholder('—')
+                            ->visible(fn (Ticket $ticket) => $ticket->first_replied_at !== null),
                     ]),
                 Section::make(trans('tickets::tickets.description'))
                     ->columnSpanFull()
@@ -313,6 +396,27 @@ class TicketResource extends Resource
                             ->markdown()
                             ->placeholder(trans('tickets::tickets.no_description')),
                     ]),
+                Section::make(trans('tickets::tickets.custom_fields'))
+                    ->columnSpanFull()
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 3])
+                    ->schema(function (Ticket $ticket): array {
+                        if (!$ticket->category_id) {
+                            return [];
+                        }
+
+                        return TicketCategoryField::where('category_id', $ticket->category_id)
+                            ->orderBy('sort_order')
+                            ->get()
+                            ->map(fn (TicketCategoryField $field) => TextEntry::make("custom_field_values.{$field->key}")
+                                ->label($field->label)
+                                ->placeholder('—')
+                                ->formatStateUsing(fn ($state) => is_bool($state) ? ($state ? '✓' : '✗') : (string) ($state ?? ''))
+                            )
+                            ->toArray();
+                    })
+                    ->visible(fn (Ticket $ticket): bool => $ticket->category_id !== null &&
+                        TicketCategoryField::where('category_id', $ticket->category_id)->exists()
+                    ),
             ]);
     }
 

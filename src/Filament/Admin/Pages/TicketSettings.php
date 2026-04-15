@@ -42,20 +42,26 @@ class TicketSettings extends Page implements HasSchemas
     public function mount(): void
     {
         $this->form->fill([
-            'TICKETS_USER_CREATION'       => config('tickets.user_creation'),
-            'TICKETS_MAX_OPEN_TICKETS'    => config('tickets.max_open_tickets'),
-            'TICKETS_DEFAULT_PRIORITY'    => config('tickets.default_priority'),
-            'TICKETS_AUTO_CLOSE_DAYS'     => config('tickets.auto_close_days'),
-            'TICKETS_SLA_ENABLED'         => config('tickets.sla.enabled'),
-            'TICKETS_SLA_LOW_HOURS'       => config('tickets.sla.low_hours'),
-            'TICKETS_SLA_NORMAL_HOURS'    => config('tickets.sla.normal_hours'),
-            'TICKETS_SLA_HIGH_HOURS'      => config('tickets.sla.high_hours'),
-            'TICKETS_SLA_VERY_HIGH_HOURS' => config('tickets.sla.very_high_hours'),
-            'TICKETS_NOTIFY_NEW_TICKET'   => config('tickets.notifications.new_ticket'),
-            'TICKETS_NOTIFY_NEW_REPLY'    => config('tickets.notifications.new_reply'),
-            'TICKETS_NOTIFY_ASSIGNED'     => config('tickets.notifications.ticket_assigned'),
-            'TICKETS_NOTIFY_CLOSED'       => config('tickets.notifications.ticket_closed'),
-            'TICKETS_NOTIFY_REOPENED'     => config('tickets.notifications.ticket_reopened'),
+            'TICKETS_USER_CREATION'        => config('tickets.user_creation'),
+            'TICKETS_MAX_OPEN_TICKETS'     => config('tickets.max_open_tickets'),
+            'TICKETS_DEFAULT_PRIORITY'     => config('tickets.default_priority'),
+            'TICKETS_AUTO_CLOSE_DAYS'      => config('tickets.auto_close_days'),
+            'TICKETS_SLA_ENABLED'          => config('tickets.sla.enabled'),
+            'TICKETS_SLA_LOW_HOURS'        => config('tickets.sla.low_hours'),
+            'TICKETS_SLA_NORMAL_HOURS'     => config('tickets.sla.normal_hours'),
+            'TICKETS_SLA_HIGH_HOURS'       => config('tickets.sla.high_hours'),
+            'TICKETS_SLA_VERY_HIGH_HOURS'  => config('tickets.sla.very_high_hours'),
+            'TICKETS_NOTIFY_NEW_TICKET'    => config('tickets.notifications.new_ticket'),
+            'TICKETS_NOTIFY_NEW_REPLY'     => config('tickets.notifications.new_reply'),
+            'TICKETS_NOTIFY_ASSIGNED'      => config('tickets.notifications.ticket_assigned'),
+            'TICKETS_NOTIFY_CLOSED'        => config('tickets.notifications.ticket_closed'),
+            'TICKETS_NOTIFY_REOPENED'      => config('tickets.notifications.ticket_reopened'),
+            'TICKETS_WEBHOOK_URL'          => config('tickets.webhook.url'),
+            'TICKETS_WEBHOOK_NEW_TICKET'   => config('tickets.webhook.new_ticket'),
+            'TICKETS_WEBHOOK_NEW_REPLY'    => config('tickets.webhook.new_reply'),
+            'TICKETS_WEBHOOK_CLOSED'       => config('tickets.webhook.closed'),
+            'TICKETS_WEBHOOK_ASSIGNED'     => config('tickets.webhook.assigned'),
+            'TICKETS_WEBHOOK_REOPENED'     => config('tickets.webhook.reopened'),
         ]);
     }
 
@@ -133,6 +139,26 @@ class TicketSettings extends Page implements HasSchemas
                                 ->helperText(trans('tickets::tickets.settings.notify_reopened_help')),
                         ]),
                     ]),
+
+                    Tab::make(trans('tickets::tickets.settings.tab_webhook'))->schema([
+                        Section::make()->schema([
+                            TextInput::make('TICKETS_WEBHOOK_URL')
+                                ->label(trans('tickets::tickets.settings.webhook_url'))
+                                ->helperText(trans('tickets::tickets.settings.webhook_url_help'))
+                                ->url()
+                                ->columnSpanFull(),
+                            Toggle::make('TICKETS_WEBHOOK_NEW_TICKET')
+                                ->label(trans('tickets::tickets.settings.webhook_new_ticket')),
+                            Toggle::make('TICKETS_WEBHOOK_NEW_REPLY')
+                                ->label(trans('tickets::tickets.settings.webhook_new_reply')),
+                            Toggle::make('TICKETS_WEBHOOK_CLOSED')
+                                ->label(trans('tickets::tickets.settings.webhook_closed')),
+                            Toggle::make('TICKETS_WEBHOOK_ASSIGNED')
+                                ->label(trans('tickets::tickets.settings.webhook_assigned')),
+                            Toggle::make('TICKETS_WEBHOOK_REOPENED')
+                                ->label(trans('tickets::tickets.settings.webhook_reopened')),
+                        ])->columns(2),
+                    ]),
                 ]),
             ]);
     }
@@ -152,20 +178,26 @@ class TicketSettings extends Page implements HasSchemas
         $data = $this->form->getState();
 
         $this->writeToEnvironment([
-            'TICKETS_USER_CREATION'       => $data['TICKETS_USER_CREATION'] ? 'true' : 'false',
-            'TICKETS_MAX_OPEN_TICKETS'    => $data['TICKETS_MAX_OPEN_TICKETS'],
-            'TICKETS_DEFAULT_PRIORITY'    => $data['TICKETS_DEFAULT_PRIORITY'],
-            'TICKETS_AUTO_CLOSE_DAYS'     => $data['TICKETS_AUTO_CLOSE_DAYS'],
-            'TICKETS_SLA_ENABLED'         => $data['TICKETS_SLA_ENABLED'] ? 'true' : 'false',
-            'TICKETS_SLA_LOW_HOURS'       => $data['TICKETS_SLA_LOW_HOURS'],
-            'TICKETS_SLA_NORMAL_HOURS'    => $data['TICKETS_SLA_NORMAL_HOURS'],
-            'TICKETS_SLA_HIGH_HOURS'      => $data['TICKETS_SLA_HIGH_HOURS'],
-            'TICKETS_SLA_VERY_HIGH_HOURS' => $data['TICKETS_SLA_VERY_HIGH_HOURS'],
-            'TICKETS_NOTIFY_NEW_TICKET'   => $data['TICKETS_NOTIFY_NEW_TICKET'] ? 'true' : 'false',
-            'TICKETS_NOTIFY_NEW_REPLY'    => $data['TICKETS_NOTIFY_NEW_REPLY'] ? 'true' : 'false',
-            'TICKETS_NOTIFY_ASSIGNED'     => $data['TICKETS_NOTIFY_ASSIGNED'] ? 'true' : 'false',
-            'TICKETS_NOTIFY_CLOSED'       => $data['TICKETS_NOTIFY_CLOSED'] ? 'true' : 'false',
-            'TICKETS_NOTIFY_REOPENED'     => $data['TICKETS_NOTIFY_REOPENED'] ? 'true' : 'false',
+            'TICKETS_USER_CREATION'        => $data['TICKETS_USER_CREATION'] ? 'true' : 'false',
+            'TICKETS_MAX_OPEN_TICKETS'     => $data['TICKETS_MAX_OPEN_TICKETS'],
+            'TICKETS_DEFAULT_PRIORITY'     => $data['TICKETS_DEFAULT_PRIORITY'],
+            'TICKETS_AUTO_CLOSE_DAYS'      => $data['TICKETS_AUTO_CLOSE_DAYS'],
+            'TICKETS_SLA_ENABLED'          => $data['TICKETS_SLA_ENABLED'] ? 'true' : 'false',
+            'TICKETS_SLA_LOW_HOURS'        => $data['TICKETS_SLA_LOW_HOURS'],
+            'TICKETS_SLA_NORMAL_HOURS'     => $data['TICKETS_SLA_NORMAL_HOURS'],
+            'TICKETS_SLA_HIGH_HOURS'       => $data['TICKETS_SLA_HIGH_HOURS'],
+            'TICKETS_SLA_VERY_HIGH_HOURS'  => $data['TICKETS_SLA_VERY_HIGH_HOURS'],
+            'TICKETS_NOTIFY_NEW_TICKET'    => $data['TICKETS_NOTIFY_NEW_TICKET'] ? 'true' : 'false',
+            'TICKETS_NOTIFY_NEW_REPLY'     => $data['TICKETS_NOTIFY_NEW_REPLY'] ? 'true' : 'false',
+            'TICKETS_NOTIFY_ASSIGNED'      => $data['TICKETS_NOTIFY_ASSIGNED'] ? 'true' : 'false',
+            'TICKETS_NOTIFY_CLOSED'        => $data['TICKETS_NOTIFY_CLOSED'] ? 'true' : 'false',
+            'TICKETS_NOTIFY_REOPENED'      => $data['TICKETS_NOTIFY_REOPENED'] ? 'true' : 'false',
+            'TICKETS_WEBHOOK_URL'          => $data['TICKETS_WEBHOOK_URL'] ?? '',
+            'TICKETS_WEBHOOK_NEW_TICKET'   => $data['TICKETS_WEBHOOK_NEW_TICKET'] ? 'true' : 'false',
+            'TICKETS_WEBHOOK_NEW_REPLY'    => $data['TICKETS_WEBHOOK_NEW_REPLY'] ? 'true' : 'false',
+            'TICKETS_WEBHOOK_CLOSED'       => $data['TICKETS_WEBHOOK_CLOSED'] ? 'true' : 'false',
+            'TICKETS_WEBHOOK_ASSIGNED'     => $data['TICKETS_WEBHOOK_ASSIGNED'] ? 'true' : 'false',
+            'TICKETS_WEBHOOK_REOPENED'     => $data['TICKETS_WEBHOOK_REOPENED'] ? 'true' : 'false',
         ]);
 
         Notification::make()

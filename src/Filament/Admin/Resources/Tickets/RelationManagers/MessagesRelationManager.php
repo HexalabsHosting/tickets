@@ -4,6 +4,7 @@ namespace FyWolf\Tickets\Filament\Admin\Resources\Tickets\RelationManagers;
 
 use App\Filament\Admin\Resources\Users\Pages\EditUser;
 use App\Filament\Components\Tables\Columns\DateTimeColumn;
+use FyWolf\Tickets\Enums\MessageType;
 use FyWolf\Tickets\Enums\TicketStatus;
 use FyWolf\Tickets\Models\CannedResponse;
 use FyWolf\Tickets\Models\Ticket;
@@ -11,9 +12,12 @@ use FyWolf\Tickets\Models\TicketMessage;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ToggleButtons;
+use Illuminate\Support\Facades\Storage;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Tables\Columns\Layout\Split;
@@ -48,6 +52,12 @@ class MessagesRelationManager extends RelationManager
                         DateTimeColumn::make('created_at')
                             ->grow(false)
                             ->since(),
+                        TextColumn::make('is_note')
+                            ->grow(false)
+                            ->badge()
+                            ->color('warning')
+                            ->icon('tabler-note')
+                            ->state(fn (TicketMessage $ticketMessage) => $ticketMessage->type === MessageType::Note ? trans('tickets::tickets.message_type_note') : null),
                         TextColumn::make('is_hidden')
                             ->grow(false)
                             ->badge()
@@ -63,6 +73,24 @@ class MessagesRelationManager extends RelationManager
                             ->badge()
                             ->state(fn (TicketMessage $ticketMessage) => $ticketMessage->author_id === $this->getOwnerRecord()->assigned_user_id ? trans('tickets::tickets.admin') : null),
                     ]),
+                    TextColumn::make('attachments')
+                        ->html()
+                        ->state(function (TicketMessage $msg): string {
+                            if (empty($msg->attachments)) {
+                                return '';
+                            }
+
+                            return collect($msg->attachments)
+                                ->map(function (string $path): string {
+                                    $url  = Storage::disk('public')->url($path);
+                                    $name = basename($path);
+
+                                    return '<a href="' . e($url) . '" target="_blank" rel="noopener" '
+                                        . 'class="text-xs text-primary-600 hover:underline inline-flex items-center gap-1">'
+                                        . '📎 ' . e($name) . '</a>';
+                                })
+                                ->implode('&ensp;');
+                        }),
                 ])->space(3),
             ])
             ->recordActions([
@@ -101,11 +129,24 @@ class MessagesRelationManager extends RelationManager
                             })
                             ->dehydrated(false)
                             ->hidden(fn () => CannedResponse::count() === 0),
+                        ToggleButtons::make('type')
+                            ->label(trans('tickets::tickets.message_type'))
+                            ->options(MessageType::class)
+                            ->default(MessageType::Reply)
+                            ->inline(),
                         MarkdownEditor::make('message')
                             ->label(trans_choice('tickets::tickets.message', 1))
                             ->required(),
                         Toggle::make('hidden')
                             ->label(trans('tickets::tickets.hidden') . '?'),
+                        FileUpload::make('attachments')
+                            ->label(trans('tickets::tickets.attachments'))
+                            ->multiple()
+                            ->disk('public')
+                            ->directory('ticket-attachments')
+                            ->downloadable()
+                            ->openable()
+                            ->columnSpanFull(),
                     ])
                     ->after(function () {
                         $ticket = $this->getOwnerRecord();

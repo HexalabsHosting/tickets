@@ -6,6 +6,7 @@ use App\Filament\Components\Tables\Columns\DateTimeColumn;
 use FyWolf\Tickets\Filament\Admin\Resources\TicketCategories\Pages\CreateTicketCategory;
 use FyWolf\Tickets\Filament\Admin\Resources\TicketCategories\Pages\EditTicketCategory;
 use FyWolf\Tickets\Filament\Admin\Resources\TicketCategories\Pages\ListTicketCategories;
+use FyWolf\Tickets\Filament\Admin\Resources\TicketCategories\RelationManagers\CategoryFieldsRelationManager;
 use FyWolf\Tickets\Models\TicketCategory;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -162,6 +163,13 @@ class TicketCategoryResource extends Resource
             ->emptyStateIcon('tabler-category')
             ->emptyStateHeading(trans('tickets::tickets.no_categories'))
             ->emptyStateDescription('');
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            CategoryFieldsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

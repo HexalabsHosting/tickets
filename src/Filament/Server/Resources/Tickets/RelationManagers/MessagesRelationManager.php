@@ -4,12 +4,15 @@ namespace FyWolf\Tickets\Filament\Server\Resources\Tickets\RelationManagers;
 
 use App\Filament\Admin\Resources\Users\Pages\EditUser;
 use App\Filament\Components\Tables\Columns\DateTimeColumn;
+use FyWolf\Tickets\Enums\MessageType;
 use FyWolf\Tickets\Enums\TicketStatus;
 use FyWolf\Tickets\Models\Ticket;
 use FyWolf\Tickets\Models\TicketMessage;
 use Filament\Actions\CreateAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Resources\RelationManagers\RelationManager;
+use Illuminate\Support\Facades\Storage;
 use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
@@ -26,7 +29,7 @@ class MessagesRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->where('hidden', false))
+            ->modifyQueryUsing(fn (Builder $query) => $query->where('hidden', false)->where('type', MessageType::Reply->value))
             ->modelLabel(trans_choice('tickets::tickets.message', 1))
             ->pluralModelLabel(trans_choice('tickets::tickets.message', 2))
             ->paginated(false)
@@ -54,6 +57,24 @@ class MessagesRelationManager extends RelationManager
                             ->badge()
                             ->state(fn (TicketMessage $ticketMessage) => $ticketMessage->author_id === $this->getOwnerRecord()->assigned_user_id ? trans('tickets::tickets.admin') : null),
                     ]),
+                    TextColumn::make('attachments')
+                        ->html()
+                        ->state(function (TicketMessage $ticketMessage): string {
+                            if (empty($ticketMessage->attachments)) {
+                                return '';
+                            }
+
+                            return collect($ticketMessage->attachments)
+                                ->map(function (string $path): string {
+                                    $url  = Storage::disk('public')->url($path);
+                                    $name = basename($path);
+
+                                    return '<a href="' . e($url) . '" target="_blank" rel="noopener" '
+                                        . 'class="text-xs text-primary-600 hover:underline inline-flex items-center gap-1">'
+                                        . '📎 ' . e($name) . '</a>';
+                                })
+                                ->implode('&ensp;');
+                        }),
                 ])->space(3),
             ])
             ->headerActions([
@@ -64,6 +85,14 @@ class MessagesRelationManager extends RelationManager
                         MarkdownEditor::make('message')
                             ->label(trans_choice('tickets::tickets.message', 1))
                             ->required(),
+                        FileUpload::make('attachments')
+                            ->label(trans('tickets::tickets.attachments'))
+                            ->multiple()
+                            ->disk('public')
+                            ->directory('ticket-attachments')
+                            ->downloadable()
+                            ->openable()
+                            ->columnSpanFull(),
                     ])
                     ->after(function () {
                         $ticket = $this->getOwnerRecord();

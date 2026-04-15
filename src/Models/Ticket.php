@@ -7,6 +7,8 @@ use App\Models\User;
 use FyWolf\Tickets\Enums\TicketPriority;
 use FyWolf\Tickets\Enums\TicketStatus;
 use FyWolf\Tickets\Filament\Server\Resources\Tickets\Pages\ListTickets;
+use FyWolf\Tickets\Services\AutomationService;
+use FyWolf\Tickets\Services\WebhookService;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -25,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property TicketStatus $status
  * @property ?string $description
  * @property ?Carbon $closed_at
+ * @property ?Carbon $first_replied_at
  * @property int $server_id
  * @property Server $server
  * @property ?int $author_id
@@ -43,6 +46,8 @@ class Ticket extends Model
         'status',
         'description',
         'closed_at',
+        'first_replied_at',
+        'custom_field_values',
         'server_id',
         'author_id',
         'assigned_user_id',
@@ -57,14 +62,21 @@ class Ticket extends Model
             $model->server_id ??= Filament::getTenant()?->getKey();
             $model->author_id ??= auth()->user()?->id;
         });
+
+        static::created(function (self $model) {
+            AutomationService::evaluate('ticket_created', $model);
+            WebhookService::send('new_ticket', $model, $model->description);
+        });
     }
 
     protected function casts(): array
     {
         return [
-            'priority'  => TicketPriority::class,
-            'status'    => TicketStatus::class,
-            'closed_at' => 'datetime',
+            'priority'             => TicketPriority::class,
+            'status'               => TicketStatus::class,
+            'closed_at'            => 'datetime',
+            'first_replied_at'     => 'datetime',
+            'custom_field_values'  => 'array',
         ];
     }
 
@@ -106,6 +118,8 @@ class Ticket extends Model
         $this->closed_at = now();
         $this->save();
 
+        WebhookService::send('closed', $this, $answer);
+
         if (
             config('tickets.notifications.ticket_closed', true) &&
             $this->author &&
@@ -135,6 +149,8 @@ class Ticket extends Model
         $this->closed_at = null;
         $this->save();
 
+        WebhookService::send('reopened', $this);
+
         if (config('tickets.notifications.ticket_reopened', true) && $this->assignedUser) {
             Notification::make()
                 ->title(trans('tickets::tickets.notifications.reopened'))
@@ -151,6 +167,8 @@ class Ticket extends Model
         }
 
         $this->save();
+
+        WebhookService::send('assigned', $this);
 
         if (config('tickets.notifications.ticket_assigned', true)) {
             Notification::make()

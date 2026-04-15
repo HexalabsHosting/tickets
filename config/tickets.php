@@ -21,4 +21,13 @@ return [
         'ticket_closed'   => (bool) env('TICKETS_NOTIFY_CLOSED', true),
         'ticket_reopened' => (bool) env('TICKETS_NOTIFY_REOPENED', true),
     ],
+
+    'webhook' => [
+        'url'        => env('TICKETS_WEBHOOK_URL', ''),
+        'new_ticket' => (bool) env('TICKETS_WEBHOOK_NEW_TICKET', true),
+        'new_reply'  => (bool) env('TICKETS_WEBHOOK_NEW_REPLY', true),
+        'closed'     => (bool) env('TICKETS_WEBHOOK_CLOSED', true),
+        'assigned'   => (bool) env('TICKETS_WEBHOOK_ASSIGNED', true),
+        'reopened'   => (bool) env('TICKETS_WEBHOOK_REOPENED', true),
+    ],
 ];
