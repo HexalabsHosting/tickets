@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class TicketsCategoryChart extends ChartWidget
 {
-    protected static ?string $maxHeight = '220px';
+    protected ?string $maxHeight = '220px';
 
     public function getHeading(): string
     {

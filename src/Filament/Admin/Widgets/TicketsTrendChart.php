@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 
 class TicketsTrendChart extends ChartWidget
 {
-    protected static ?string $maxHeight = '220px';
+    protected ?string $maxHeight = '220px';
 
     protected int|string|array $columnSpan = 'full';
 
