@@ -3,22 +3,43 @@
 namespace FyWolf\Tickets;
 
 use App\Contracts\Plugins\HasPluginSettings;
+use App\Models\Server;
 use App\Traits\EnvironmentWriterTrait;
 use Filament\Contracts\Plugin;
-use Filament\Forms\Components\Select;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
+use Filament\Navigation\NavigationItem;
 use Filament\Notifications\Notification;
 use Filament\Panel;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Tabs;
-use Filament\Schemas\Components\Tabs\Tab;
-use FyWolf\Tickets\Enums\TicketPriority;
-use FyWolf\Tickets\Filament\Admin\Pages\TicketsReportPage;
-use FyWolf\Tickets\Filament\Admin\Widgets\TicketsCategoryChart;
-use FyWolf\Tickets\Filament\Admin\Widgets\TicketsOverviewWidget;
-use FyWolf\Tickets\Filament\Admin\Widgets\TicketsTrendChart;
 
+/**
+ * Support, delegated to the billing app.
+ *
+ * This plugin used to be the whole helpdesk — models, migrations, Filament
+ * resources, policies, widgets and reports, all inside the panel. That is gone,
+ * for the same reasons billing itself left the panel:
+ *
+ *  - support history lived in the panel database, so a panel restore rolled
+ *    tickets back along with everything else;
+ *  - an agent answering a ticket could not see the customer's orders, invoices
+ *    or payments, which is most of what a hosting question is actually about;
+ *  - it was several thousand lines of Filament, and a Filament major bump is
+ *    precisely what broke the previous in-panel billing plugin.
+ *
+ * What remains is a link. No models, no migrations, no Filament resources — so
+ * a panel upgrade has nothing here to break.
+ *
+ * The link carries the server's uuid; the billing app resolves it to the order
+ * and pre-fills the form. The panel is already an OAuth client of billing, so
+ * the customer arrives signed in.
+ *
+ * **The old tables are deliberately left in place.** `tickets`,
+ * `ticket_messages`, `ticket_categories`, `ticket_category_fields`,
+ * `ticket_canned_responses` and `ticket_automation_rules` are no longer read or
+ * written. Export anything worth keeping, then drop them by hand — shipping a
+ * migration that destroys a support archive is not a thing to do automatically.
+ */
 class TicketsPlugin implements HasPluginSettings, Plugin
 {
     use EnvironmentWriterTrait;
@@ -30,162 +51,76 @@ class TicketsPlugin implements HasPluginSettings, Plugin
 
     public function register(Panel $panel): void
     {
-        $id = str($panel->getId())->title();
-
-        $panel->discoverResources(plugin_path($this->getId(), "src/Filament/$id/Resources"), "FyWolf\\Tickets\\Filament\\$id\\Resources");
-
-        if ($panel->getId() === 'admin') {
-            $panel->pages([TicketsReportPage::class]);
-            $panel->widgets([TicketsOverviewWidget::class, TicketsTrendChart::class, TicketsCategoryChart::class]);
+        // Server panel only: the link needs a server for its context, and
+        // support is customer-facing rather than an admin tool.
+        if ($panel->getId() !== 'server') {
+            return;
         }
+
+        $panel->navigationItems([
+            NavigationItem::make('Support')
+                ->icon('tabler-lifebuoy')
+                ->sort(20)
+                ->visible(fn (): bool => filled(config('tickets.billing_url')))
+                ->url(fn (): string => $this->supportUrl(), shouldOpenInNewTab: true),
+        ]);
     }
 
     public function boot(Panel $panel): void {}
 
+    /**
+     * `/support/new?server={uuid}&from=panel`.
+     *
+     * The uuid rather than the panel's own server id: billing stores the uuid
+     * on the order, and it is the only identifier both sides share.
+     */
+    private function supportUrl(): string
+    {
+        $base = rtrim((string) config('tickets.billing_url'), '/') . '/support/new';
+
+        /** @var Server|null $server */
+        $server = Filament::getTenant();
+
+        if (! $server) {
+            return $base;
+        }
+
+        return $base . '?' . http_build_query([
+            'server' => $server->uuid,
+            'from'   => 'panel',
+        ]);
+    }
+
     public function getSettingsForm(): array
     {
         return [
-            Tabs::make()->tabs([
-                Tab::make(trans('tickets::tickets.settings.tab_general'))->schema([
-                    Section::make()->columns(2)->schema([
-                        Toggle::make('user_creation')
-                            ->label(trans('tickets::tickets.settings.user_creation'))
-                            ->helperText(trans('tickets::tickets.settings.user_creation_help'))
-                            ->default(fn () => config('tickets.user_creation'))
-                            ->columnSpanFull(),
-                        TextInput::make('max_open_tickets')
-                            ->label(trans('tickets::tickets.settings.max_open_tickets'))
-                            ->helperText(trans('tickets::tickets.settings.max_open_tickets_help'))
-                            ->numeric()
-                            ->minValue(0)
-                            ->default(fn () => config('tickets.max_open_tickets')),
-                        Select::make('default_priority')
-                            ->label(trans('tickets::tickets.settings.default_priority'))
-                            ->options(TicketPriority::class)
-                            ->selectablePlaceholder(false)
-                            ->default(fn () => config('tickets.default_priority')),
-                        TextInput::make('auto_close_days')
-                            ->label(trans('tickets::tickets.settings.auto_close_days'))
-                            ->helperText(trans('tickets::tickets.settings.auto_close_days_help'))
-                            ->numeric()
-                            ->minValue(0)
-                            ->suffix(trans('tickets::tickets.settings.days'))
-                            ->default(fn () => config('tickets.auto_close_days')),
-                    ]),
+            Section::make('Support')
+                ->description('Tickets are handled by the billing app; this plugin only links to it.')
+                ->schema([
+                    TextInput::make('TICKETS_BILLING_URL')
+                        ->label('Billing app URL')
+                        ->url()
+                        ->placeholder('https://billing.example.com')
+                        ->helperText('Customers are sent to /support/new there, with their server pre-selected.')
+                        ->default(config('tickets.billing_url')),
                 ]),
-
-                Tab::make(trans('tickets::tickets.settings.tab_sla'))->schema([
-                    Section::make()->columns(2)->schema([
-                        Toggle::make('sla_enabled')
-                            ->label(trans('tickets::tickets.settings.sla_enabled'))
-                            ->helperText(trans('tickets::tickets.settings.sla_enabled_help'))
-                            ->default(fn () => config('tickets.sla.enabled'))
-                            ->columnSpanFull(),
-                        TextInput::make('sla_low_hours')
-                            ->label(trans('tickets::tickets.settings.sla_low'))
-                            ->numeric()->minValue(1)
-                            ->suffix(trans('tickets::tickets.settings.hours'))
-                            ->default(fn () => config('tickets.sla.low_hours')),
-                        TextInput::make('sla_normal_hours')
-                            ->label(trans('tickets::tickets.settings.sla_normal'))
-                            ->numeric()->minValue(1)
-                            ->suffix(trans('tickets::tickets.settings.hours'))
-                            ->default(fn () => config('tickets.sla.normal_hours')),
-                        TextInput::make('sla_high_hours')
-                            ->label(trans('tickets::tickets.settings.sla_high'))
-                            ->numeric()->minValue(1)
-                            ->suffix(trans('tickets::tickets.settings.hours'))
-                            ->default(fn () => config('tickets.sla.high_hours')),
-                        TextInput::make('sla_very_high_hours')
-                            ->label(trans('tickets::tickets.settings.sla_very_high'))
-                            ->numeric()->minValue(1)
-                            ->suffix(trans('tickets::tickets.settings.hours'))
-                            ->default(fn () => config('tickets.sla.very_high_hours')),
-                    ]),
-                ]),
-
-                Tab::make(trans('tickets::tickets.settings.tab_notifications'))->schema([
-                    Section::make()->schema([
-                        Toggle::make('notify_new_ticket')
-                            ->label(trans('tickets::tickets.settings.notify_new_ticket'))
-                            ->helperText(trans('tickets::tickets.settings.notify_new_ticket_help'))
-                            ->default(fn () => config('tickets.notifications.new_ticket')),
-                        Toggle::make('notify_new_reply')
-                            ->label(trans('tickets::tickets.settings.notify_new_reply'))
-                            ->helperText(trans('tickets::tickets.settings.notify_new_reply_help'))
-                            ->default(fn () => config('tickets.notifications.new_reply')),
-                        Toggle::make('notify_assigned')
-                            ->label(trans('tickets::tickets.settings.notify_assigned'))
-                            ->helperText(trans('tickets::tickets.settings.notify_assigned_help'))
-                            ->default(fn () => config('tickets.notifications.ticket_assigned')),
-                        Toggle::make('notify_closed')
-                            ->label(trans('tickets::tickets.settings.notify_closed'))
-                            ->helperText(trans('tickets::tickets.settings.notify_closed_help'))
-                            ->default(fn () => config('tickets.notifications.ticket_closed')),
-                        Toggle::make('notify_reopened')
-                            ->label(trans('tickets::tickets.settings.notify_reopened'))
-                            ->helperText(trans('tickets::tickets.settings.notify_reopened_help'))
-                            ->default(fn () => config('tickets.notifications.ticket_reopened')),
-                    ]),
-                ]),
-
-                Tab::make(trans('tickets::tickets.settings.tab_webhook'))->schema([
-                    Section::make()->columns(2)->schema([
-                        TextInput::make('webhook_url')
-                            ->label(trans('tickets::tickets.settings.webhook_url'))
-                            ->helperText(trans('tickets::tickets.settings.webhook_url_help'))
-                            ->url()
-                            ->default(fn () => config('tickets.webhook.url'))
-                            ->columnSpanFull(),
-                        Toggle::make('webhook_new_ticket')
-                            ->label(trans('tickets::tickets.settings.webhook_new_ticket'))
-                            ->default(fn () => config('tickets.webhook.new_ticket')),
-                        Toggle::make('webhook_new_reply')
-                            ->label(trans('tickets::tickets.settings.webhook_new_reply'))
-                            ->default(fn () => config('tickets.webhook.new_reply')),
-                        Toggle::make('webhook_closed')
-                            ->label(trans('tickets::tickets.settings.webhook_closed'))
-                            ->default(fn () => config('tickets.webhook.closed')),
-                        Toggle::make('webhook_assigned')
-                            ->label(trans('tickets::tickets.settings.webhook_assigned'))
-                            ->default(fn () => config('tickets.webhook.assigned')),
-                        Toggle::make('webhook_reopened')
-                            ->label(trans('tickets::tickets.settings.webhook_reopened'))
-                            ->default(fn () => config('tickets.webhook.reopened')),
-                    ]),
-                ]),
-            ]),
         ];
+    }
+
+    public function getSettings(): array
+    {
+        return ['TICKETS_BILLING_URL' => config('tickets.billing_url')];
     }
 
     public function saveSettings(array $data): void
     {
-        $this->writeToEnvironment([
-            'TICKETS_USER_CREATION'       => ($data['user_creation'] ?? false) ? 'true' : 'false',
-            'TICKETS_MAX_OPEN_TICKETS'    => $data['max_open_tickets'] ?? 0,
-            'TICKETS_DEFAULT_PRIORITY'    => $data['default_priority'] ?? 'normal',
-            'TICKETS_AUTO_CLOSE_DAYS'     => $data['auto_close_days'] ?? 0,
-            'TICKETS_SLA_ENABLED'         => ($data['sla_enabled'] ?? false) ? 'true' : 'false',
-            'TICKETS_SLA_LOW_HOURS'       => $data['sla_low_hours'] ?? 72,
-            'TICKETS_SLA_NORMAL_HOURS'    => $data['sla_normal_hours'] ?? 48,
-            'TICKETS_SLA_HIGH_HOURS'      => $data['sla_high_hours'] ?? 24,
-            'TICKETS_SLA_VERY_HIGH_HOURS' => $data['sla_very_high_hours'] ?? 4,
-            'TICKETS_NOTIFY_NEW_TICKET'   => ($data['notify_new_ticket'] ?? true) ? 'true' : 'false',
-            'TICKETS_NOTIFY_NEW_REPLY'    => ($data['notify_new_reply'] ?? true) ? 'true' : 'false',
-            'TICKETS_NOTIFY_ASSIGNED'     => ($data['notify_assigned'] ?? true) ? 'true' : 'false',
-            'TICKETS_NOTIFY_CLOSED'       => ($data['notify_closed'] ?? true) ? 'true' : 'false',
-            'TICKETS_NOTIFY_REOPENED'     => ($data['notify_reopened'] ?? true) ? 'true' : 'false',
-            'TICKETS_WEBHOOK_URL'         => $data['webhook_url'] ?? '',
-            'TICKETS_WEBHOOK_NEW_TICKET'  => ($data['webhook_new_ticket'] ?? true) ? 'true' : 'false',
-            'TICKETS_WEBHOOK_NEW_REPLY'   => ($data['webhook_new_reply'] ?? true) ? 'true' : 'false',
-            'TICKETS_WEBHOOK_CLOSED'      => ($data['webhook_closed'] ?? true) ? 'true' : 'false',
-            'TICKETS_WEBHOOK_ASSIGNED'    => ($data['webhook_assigned'] ?? true) ? 'true' : 'false',
-            'TICKETS_WEBHOOK_REOPENED'    => ($data['webhook_reopened'] ?? true) ? 'true' : 'false',
-        ]);
+        $this->writeToEnvironment(['TICKETS_BILLING_URL' => $data['TICKETS_BILLING_URL'] ?? '']);
 
-        Notification::make()
-            ->title(trans('tickets::tickets.settings.saved'))
-            ->success()
-            ->send();
+        Notification::make()->title('Support settings saved')->success()->send();
+    }
+
+    public static function make(): static
+    {
+        return app(static::class);
     }
 }

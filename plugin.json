@@ -2,18 +2,16 @@
   "id": "tickets",
   "name": "Tickets",
   "author": "FyWolf",
-  "version": "1.1.0",
-  "description": "Professional ticketing suite with SLA, canned responses, and configurable settings",
+  "version": "2.0.0",
+  "description": "Links the panel to the billing app's helpdesk. No in-panel ticket storage.",
   "category": "plugin",
   "url": "https://github.com/HexalabsHosting/tickets",
   "update_url": "https://raw.githubusercontent.com/HexalabsHosting/tickets/refs/heads/main/updater.json",
   "namespace": "FyWolf\\Tickets",
   "class": "TicketsPlugin",
   "panels": [
-    "admin",
-    "app",
     "server"
   ],
-  "panel_version": null,
+  "panel_version": "^2.0",
   "composer_packages": null
 }
