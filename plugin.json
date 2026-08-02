@@ -12,6 +12,6 @@
   "panels": [
     "server"
   ],
-  "panel_version": "^2.0",
+  "panel_version": "^1.0",
   "composer_packages": null
 }
