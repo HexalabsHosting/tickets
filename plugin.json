@@ -2,7 +2,7 @@
   "id": "tickets",
   "name": "Tickets",
   "author": "FyWolf",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Links the panel to the billing app's helpdesk. No in-panel ticket storage.",
   "category": "plugin",
   "url": "https://github.com/HexalabsHosting/tickets",
