@@ -107,7 +107,17 @@ class TicketsPlugin implements HasPluginSettings, Plugin
         ];
     }
 
-    public function getSettings(): array
+    /**
+     * Current values for the settings slide-over.
+     *
+     * Was `getSettings()`, which no version of `HasPluginSettings` ever declared —
+     * so it was never called by anything and the form ran on its `->default()`
+     * alone. The panel now requires this name and passes it to `->fillForm()`,
+     * which replaces those defaults, so the keys must be the field names.
+     *
+     * @return array<string, mixed>
+     */
+    public function getSettingsFormData(): array
     {
         return ['TICKETS_BILLING_URL' => config('tickets.billing_url')];
     }
